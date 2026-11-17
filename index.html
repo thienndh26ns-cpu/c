@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NightGuard AI - Hệ Thống Giám Sát Thói Quen & Cảnh Báo Sức Khỏe</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --safe: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header { text-align: center; padding: 30px 0; border-bottom: 1px solid #334155; margin-bottom: 30px; }
+        header h1 { font-size: 2.2rem; color: var(--accent); margin-bottom: 8px; }
+        header p { color: var(--text-muted); font-size: 1.05rem; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--card-bg); border-radius: 14px; padding: 24px; border: 1px solid #334155; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .card h2 { font-size: 1.25rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #e2e8f0; }
+        
+        /* Real-time Clock */
+        .clock-box { text-align: center; padding: 15px; background: #0f172a; border-radius: 10px; margin-bottom: 15px; }
+        .clock-time { font-size: 2.8rem; font-weight: bold; letter-spacing: 2px; color: var(--accent); }
+        .status-badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-top: 8px; }
+        .status-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid var(--danger); }
+        .status-safe { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid var(--safe); }
+        
+        /* Sliders */
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 500; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+        
+        /* Risk Bars */
+        .risk-item { margin-bottom: 14px; }
+        .risk-header { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 4px; }
+        .progress-bg { background: #0f172a; height: 10px; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.4s ease, background-color 0.4s ease; }
+        
+        /* AI Box */
+        .ai-box { background: linear-gradient(145deg, #1e293b, #0f172a); border-left: 4px solid var(--accent); }
+        .ai-response { font-size: 0.98rem; color: #e2e8f0; background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 8px; margin-top: 10px; }
+        
+        /* Info Section */
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-top: 15px; }
+        .info-item { background: #0f172a; padding: 15px; border-radius: 10px; border-top: 3px solid var(--warning); }
+        .info-item h3 { font-size: 1rem; color: var(--warning); margin-bottom: 6px; }
+        .info-item p { font-size: 0.88rem; color: var(--text-muted); }
+        footer { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 40px; padding-top: 20px; border-top: 1px solid #334155; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🛡️ NightGuard AI</h1>
+        <p>Hệ thống thông minh giám sát thói quen thức khuya, nghiện Internet & mô phỏng rủi ro sức khỏe</p>
+    </header>
+
+    <div class="grid">
+        <!-- Cột 1: Đồng hồ sinh học thời gian thực -->
+        <div class="card">
+            <h2>⏱️ Đồng Hồ Sinh Học Thời Gian Thực</h2>
+            <div class="clock-box">
+                <div class="clock-time" id="liveClock">00:00:00</div>
+                <div id="circadianBadge" class="status-badge status-safe">Đang tải dữ liệu...</div>
+            </div>
+            <p id="organStatus" style="font-size: 0.95rem; color: #cbd5e1;">
+                Đang phân tích trạng thái phục hồi nội tạng theo khung giờ thực tế...
+            </p>
+            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed #334155; font-size: 0.88rem; color: var(--text-muted);">
+                <strong>Thời gian phiên trực tuyến hiện tại:</strong> <span id="sessionTimer" style="color: var(--accent);">00 phút 00 giây</span>
+            </div>
+        </div>
+
+        <!-- Cột 2: Bộ nhập liệu thói quen -->
+        <div class="card">
+            <h2>🎛️ Mô Phỏng Thói Quen Hàng Ngày</h2>
+            <div class="control-group">
+                <label>
+                    <span>Giờ đi ngủ trung bình:</span>
+                    <span id="sleepHourLabel" style="color: var(--accent); font-weight: bold;">01:30 sáng</span>
+                </label>
+                <!-- Giá trị từ 21 (21h tối) đến 28 (4h sáng hôm sau) -->
+                <input type="range" id="sleepSlider" min="21" max="28" step="0.5" value="25.5">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span>Thời gian dùng Internet/ngày:</span>
+                    <span id="internetHourLabel" style="color: var(--accent); font-weight: bold;">8.0 giờ</span>
+                </label>
+                <input type="range" id="internetSlider" min="1" max="16" step="0.5" value="8">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span>Thời gian duy trì thói quen (tháng):</span>
+                    <span id="durationLabel" style="color: var(--accent); font-weight: bold;">12 tháng</span>
+                </label>
+                <input type="range" id="durationSlider" min="1" max="60" step="1" value="12">
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Cột 3: Chỉ số rủi ro sức khỏe thầm lặng -->
+        <div class="card">
+            <h2>📊 Dự Báo Tác Động Sức Khỏe Thầm Lặng</h2>
+            
+            <div class="risk-item">
+                <div class="risk-header"><span>⚡ Mức năng lượng ngày hôm sau</span><span id="energyVal">55%</span></div>
+                <div class="progress-bg"><div id="energyBar" class="progress-fill" style="width: 55%; background: var(--safe);"></div></div>
+            </div>
+
+            <div class="risk-item">
+                <div class="risk-header"><span>💇 Nguy cơ rụng tóc & suy yếu nang tóc</span><span id="hairVal">60%</span></div>
+                <div class="progress-bg"><div id="hairBar" class="progress-fill" style="width: 60%; background: var(--warning);"></div></div>
+            </div>
+
+            <div class="risk-item">
+                <div class="risk-header"><span>🍽️ Rối loạn chuyển hóa (Ăn nhiều khó tăng cân)</span><span id="metaVal">65%</span></div>
+                <div class="progress-bg"><div id="metaBar" class="progress-fill" style="width: 65%; background: var(--warning);"></div></div>
+            </div>
+
+            <div class="risk-item">
+                <div class="risk-header"><span>🩺 Nguy cơ viêm loét niêm mạc dạ dày</span><span id="stomachVal">70%</span></div>
+                <div class="progress-bg"><div id="stomachBar" class="progress-fill" style="width: 70%; background: var(--danger);"></div></div>
+            </div>
+
+            <div class="risk-item">
+                <div class="risk-header"><span>⚠️ Áp lực suy giảm chức năng thận (sau tuổi 25)</span><span id="kidneyVal">50%</span></div>
+                <div class="progress-bg"><div id="kidneyBar" class="progress-fill" style="width: 50%; background: var(--warning);"></div></div>
+            </div>
+        </div>
+
+        <!-- Cột 4: Phân tích & Cảnh báo từ AI -->
+        <div class="card ai-box">
+            <h2>🤖 Trợ Lý Phân Tích & Cảnh Báo AI</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">Chẩn đoán tự động dựa trên dữ liệu nhịp sinh học & thời gian tiếp xúc màn hình:</p>
+            <div class="ai-response" id="aiAdvice">
+                Đang phân tích dữ liệu...
+            </div>
+        </div>
+    </div>
+
+    <!-- Phần thông tin dự án theo yêu cầu của Khoa -->
+    <div class="card">
+        <h2>📚 Cơ Sở Khoa Học & Kiến Trúc Hệ Thống (Dự án Nhập môn ngành KTMT&ĐT)</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <h3>1. Rối loạn Melatonin & Rụng tóc</h3>
+                <p>Thức khuya sau 23h ức chế tuyến tùng tiết Melatonin, làm tăng hormone căng thẳng Cortisol gây co mạch máu nuôi nang tóc và gián đoạn chu kỳ mọc tóc.</p>
+            </div>
+            <div class="info-item">
+                <h3>2. Rối loạn chuyển hóa dinh dưỡng</h3>
+                <p>Thiếu ngủ làm mất cân bằng hormone Ghrelin và Leptin, đồng thời cản trở tiết hormone tăng trưởng (GH) ban đêm, khiến cơ thể kém hấp thu dù ăn nhiều.</p>
+            </div>
+            <div class="info-item">
+                <h3>3. Tổn thương dạ dày & Thận</h3>
+                <p>Ban đêm là lúc niêm mạc dạ dày tái tạo và thận lọc máu ở trạng thái nghỉ. Thức khuya kéo dài khiến axit dịch vị tăng tiết và thận quá tải âm thầm.</p>
+            </div>
+            <div class="info-item">
+                <h3>4. Kiến trúc Smart System & AI</h3>
+                <p>Kết hợp đồng bộ thời gian thực (Real-time Clock), mô hình tính toán trọng số rủi ro y khoa và bộ suy luận cảnh báo AI cá nhân hóa.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Đồ án Nhập môn ngành & Kỹ năng mềm - Khoa Kỹ thuật Máy tính & Điện tử (VKU) | GVHD: TS. Hoàng Hữu Đức
+    </footer>
+</div>
+
+<script>
+    // 1. Cập nhật đồng hồ thời gian thực & trạng thái nội tạng
+    let sessionSeconds = 0;
+    function updateClock() {
+        const now = new Date();
+        const h = now.getHours();
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('liveClock').innerText = `${String(h).padStart(2, '0')}:${m}:${s}`;
+
+        const badge = document.getElementById('circadianBadge');
+        const organText = document.getElementById('organStatus');
+
+        if (h >= 23 || h < 4) {
+            badge.className = 'status-badge status-danger';
+            badge.innerText = '🚨 BÁO ĐỘNG ĐỎ: ĐANG THỨC KHUYA';
+            if (h >= 23 || h < 1) {
+                organText.innerHTML = '<strong>Khung giờ 23h00 - 01h00:</strong> Gan và túi mật đang cần ngủ sâu để thải độc. Việc tiếp xúc ánh sáng xanh lúc này đang ức chế Melatonin và làm tổn thương tế bào gan.';
+            } else if (h >= 1 && h < 3) {
+                organText.innerHTML = '<strong>Khung giờ 01h00 - 03h00:</strong> Tủy sống tạo máu và niêm mạc dạ dày đang tái tạo. Thức giờ này làm tăng axit dịch vị và suy giảm phục hồi nang tóc.';
+            } else {
+                organText.innerHTML = '<strong>Khung giờ 03h00 - 04h00:</strong> Phổi và thận đang trong giai đoạn thanh lọc sâu. Cơ thể bạn đang bị bào mòn năng lượng nghiêm trọng cho ngày hôm sau.';
+            }
+        } else if (h >= 22) {
+            badge.className = 'status-badge status-danger';
+            badge.innerText = '⚠️ CẢNH BÁO: CHUẨN BỊ ĐI NGỦ';
+            organText.innerHTML = '<strong>Khung giờ 22h00 - 23h00:</strong> Hệ miễn dịch bắt đầu quá trình đào thải độc tố. Hãy ngắt kết nối Internet và chuẩn bị nghỉ ngơi trước 23h00.';
+        } else {
+            badge.className = 'status-badge status-safe';
+            badge.innerText = '✅ KHUNG GIỜ SINH HOẠT AN TOÀN';
+            organText.innerHTML = 'Hiện tại đang là khung giờ ban ngày/tối sớm. Hãy duy trì thời gian dùng Internet hợp lý và đặt mục tiêu đi ngủ trước 23h00 tối nay.';
+        }
+
+        sessionSeconds++;
+        const sm = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+        const ss = String(sessionSeconds % 60).padStart(2, '0');
+        document.getElementById('sessionTimer').innerText = `${sm} phút ${ss} giây`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. Tính toán rủi ro sức khỏe & Phản hồi AI
+    const sleepSlider = document.getElementById('sleepSlider');
+    const internetSlider = document.getElementById('internetSlider');
+    const durationSlider = document.getElementById('durationSlider');
+
+    function formatSleepHour(val) {
+        let hour = Math.floor(val);
+        let min = (val % 1) === 0.5 ? '30' : '00';
+        if (hour >= 24) {
+            return `0${hour - 24}:${min} sáng`;
+        }
+        return `${hour}:${min} tối`;
+    }
+
+    function getColor(score, inverse = false) {
+        if (inverse) {
+            if (score >= 70) return 'var(--safe)';
+            if (score >= 45) return 'var(--warning)';
+            return 'var(--danger)';
+        }
+        if (score < 40) return 'var(--safe)';
+        if (score < 70) return 'var(--warning)';
+        return 'var(--danger)';
+    }
+
+    function calculateHealth() {
+        const sleepVal = parseFloat(sleepSlider.value); // 21 to 28
+        const internetVal = parseFloat(internetSlider.value); // 1 to 16
+        const months = parseInt(durationSlider.value); // 1 to 60
+
+        document.getElementById('sleepHourLabel').innerText = formatSleepHour(sleepVal);
+        document.getElementById('internetHourLabel').innerText = `${internetVal.toFixed(1)} giờ`;
+        document.getElementById('durationLabel').innerText = `${months} tháng`;
+
+        // Hệ số thức khuya (sau 22.5h bắt đầu tính phạt)
+        const latePenalty = Math.max(0, (sleepVal - 22.5) * 14);
+        // Hệ số lướt mạng (trên 4h bắt đầu tính phạt)
+        const netPenalty = Math.max(0, (internetVal - 4) * 3.5);
+        // Hệ số tích lũy theo tháng
+        const timeMultiplier = 1 + (months / 60) * 0.45;
+
+        const energy = Math.max(10, Math.min(100, Math.round(100 - (latePenalty * 0.8 + netPenalty * 0.5))));
+        const hair = Math.min(98, Math.round((latePenalty * 0.75 + netPenalty * 0.3) * timeMultiplier));
+        const meta = Math.min(98, Math.round((latePenalty * 0.8 + netPenalty * 0.4) * timeMultiplier));
+        const stomach = Math.min(99, Math.round((latePenalty * 0.85 + netPenalty * 0.35) * timeMultiplier));
+        const kidney = Math.min(95, Math.round((latePenalty * 0.65 + netPenalty * 0.3) * (1 + months / 40)));
+
+        // Cập nhật giao diện thanh tiến trình
+        updateBar('energy', energy, true);
+        updateBar('hair', hair);
+        updateBar('meta', meta);
+        updateBar('stomach', stomach);
+        updateBar('kidney', kidney);
+
+        // Tạo lời khuyên AI cá nhân hóa
+        let advice = `<strong>Phân tích trạng thái:</strong> Với lịch đi ngủ lúc <b>${formatSleepHour(sleepVal)}</b> và sử dụng Internet <b>${internetVal} giờ/ngày</b> duy trì trong <b>${months} tháng</b>:<br><br>`;
+        
+        if (sleepVal <= 23 && internetVal <= 5) {
+            advice += `✅ Nhịp sinh học của bạn đang ở trạng thái lý tưởng. Hormone tăng trưởng và Melatonin được tiết ra đầy đủ giúp phục hồi dạ dày, thận và giữ năng lượng ngày mai ở mức <b>${energy}%</b>.`;
+        } else {
+            advice += `⚠️ <b>Cảnh báo tác hại thầm lặng:</b> Việc ngủ muộn sau 23h đang làm đứt gãy chu kỳ tái tạo tế bào. Năng lượng ngày mai của bạn chỉ còn khoảng <b>${energy}%</b>. `;
+            if (stomach >= 65) advice += `Niêm mạc dạ dày không đủ thời gian trung hòa axit ban đêm (nguy cơ đau dạ dày <b>${stomach}%</b>). `;
+            if (meta >= 60) advice += `Rối loạn hormone chuyển hóa khiến bạn rơi vào tình trạng <i>"ăn nhiều nhưng cơ thể không hấp thu để tăng cân"</i>. `;
+            if (months >= 12) advice += `<br><br>🚨 <b>Lưu ý dài hạn:</b> Nếu duy trì thói quen này quá 1 năm, áp lực lọc máu ban đêm sẽ tích tụ thành rủi ro suy giảm chức năng thận rõ rệt khi bước qua tuổi 25.`;
+        }
+        document.getElementById('aiAdvice').innerHTML = advice;
+    }
+
+    function updateBar(id, val, inverse = false) {
+        document.getElementById(`${id}Val`).innerText = `${val}%`;
+        const bar = document.getElementById(`${id}Bar`);
+        bar.style.width = `${val}%`;
+        bar.style.backgroundColor = getColor(val, inverse);
+    }
+
+    sleepSlider.addEventListener('input', calculateHealth);
+    internetSlider.addEventListener('input', calculateHealth);
+    durationSlider.addEventListener('input', calculateHealth);
+    calculateHealth();
+</script>
+</body>
+</html>
